@@ -1,0 +1,10 @@
+version: '2.0'
+services:
+  dcap-service:
+    image: 'crustio/dcap-service:1.0.0'
+    network_mode: host
+    container_name: dcap-service
+    environment:
+      DCAP_ARGS: '-t localhost -p 17777'
+      PCCS_PORT: '9999'
+      PCS_API_KEY: '5e0d868dea9c450a886ce6c46913643e'
