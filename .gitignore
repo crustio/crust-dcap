@@ -1,0 +1,12 @@
+# Utility files of Visual Studio Code
+.vscode/
+
+# Utility files of IntelliJ IDEA
+.idea/
+
+// ignore c/c++ object files
+**/*.o
+
+err.log
+
+src/dcap-service
