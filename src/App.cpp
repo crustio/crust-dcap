@@ -16,10 +16,17 @@
 #include "Defer.h"
 #include "Utils.h"
 
+extern "C" {
+#include <sr25519/sr25519.h>
+}
+
 using namespace httplib;
 
 std::string host = "0.0.0.0";
 int port = 1234;
+std::string seed;
+std::vector<uint8_t> kp(SR25519_KEYPAIR_SIZE, 0);
+std::string dcap_pubkey;
 
 int show_help(const char *name)
 {
@@ -47,7 +54,7 @@ int main(int argc, char *argv[])
         {
             if (i + 1 >= argc)
             {
-                p_log->err("-t,--host option needs configure file path as argument!\n");
+                p_log->err("-t,--host option needs a hostname as argument!\n");
                 return 1;
             }
             i++;
@@ -57,17 +64,42 @@ int main(int argc, char *argv[])
         {
             if (i + 1 >= argc)
             {
-                p_log->err("-p,--port option needs configure file path as argument!\n");
+                p_log->err("-p,--port option needs a port number as argument!\n");
                 return 1;
             }
             i++;
             port = std::atoi(argv[i]);
+        }
+        else if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--seed") == 0)
+        {
+            if (i + 1 >= argc)
+            {
+                p_log->err("-s,--seed option needs a seed string as argument!\n");
+                return 1;
+            }
+            i++;
+            seed = argv[i];
+            if (seed.size() != 64)
+            {
+                p_log->err("Invalid seed string, seed string size must be 64!\n");
+                return 1;
+            }
         }
         else
         {
             return show_help(argv[0]);
         }
     }
+
+    if (seed.size() == 0) 
+    {
+        p_log->err("Must specify a seed string in the argument!\n");
+        return 1;
+    }
+
+    // Generate sr25519 keypair from the specified seed
+    sr25519_keypair_from_seed(kp.data(), hexstring_to_bytes(seed.c_str(), seed.size()));
+    std::string dcap_pubkey = hexstring(kp.data()+SR25519_SECRET_SIZE, SR25519_PUBLIC_SIZE);
 
     p_log->info("Start dcap service at %s:%d successfully!\n", host.c_str(), port);
     Server svr;
@@ -81,25 +113,33 @@ int main(int argc, char *argv[])
     });
 
     svr.Post("/entryNetwork", [&](const Request& req, Response& res) {
-        //call DCAP quote verify library to get supplemental data size
+        //call DCAP quote verify library to verify the quote
         p_log->info("Dealing with new request...\n");
+        p_log->info("Request body:%s\n",req.body.c_str());
+
 	    int ret = 0;
         json::JSON ret_body;
+        json::JSON report_body;
         sgx_ql_qv_result_t quote_verification_result = SGX_QL_QV_RESULT_UNSPECIFIED;
 	    uint32_t collateral_expiration_status = 1;
         uint32_t supplemental_data_size = 0;
         uint8_t *p_supplemental_data = NULL;
-        json::JSON id;
 
-        Defer def_ret([&res, &ret_body, &id](void) {
+        Defer def_ret([&res, &ret_body, &report_body, p_log](void) {
             int status = ret_body["status_code"].ToInt();
+            // Provide the report body only if the quote verification success
             if (200 == status)
-                ret_body["message"] = id;
+            {
+                ret_body["report_body"] = json::Array();
+                ret_body["report_body"].append(report_body);
+            }
             res.status = status;
             std::string body = ret_body.dump();
             remove_char(body, '\\');
             remove_char(body, '\n');
             res.set_content(body, "application/json");
+
+            p_log->info("Response body: %s\n", body.c_str());
         });
 
         crust_status_t crust_status = CRUST_SUCCESS;
@@ -138,10 +178,7 @@ int main(int argc, char *argv[])
         uint8_t *p_pub_key = reinterpret_cast<uint8_t *>(&quote->report_body.report_data);
         uint8_t *p_mr_enclave = reinterpret_cast<uint8_t *>(&quote->report_body.mr_enclave);
         uint32_t identity_sz = sizeof(sgx_report_data_t) + sizeof(sgx_measurement_t) + account_id.size();
-        // Get return message
-        id["pubkey"] = hexstring(p_pub_key, sizeof(sgx_report_data_t));
-        id["mrenclave"] = hexstring(p_mr_enclave, sizeof(sgx_measurement_t));
-        id["account"] = account_id;
+        
         // Verify signature
         sgx_sha256_hash_t msg_hash;
         sgx_sha256_msg(p_sig_data, sig_data_sz, &msg_hash);
@@ -279,7 +316,7 @@ int main(int argc, char *argv[])
         {
         case SGX_QL_QV_RESULT_OK:
             p_log->info("App: Verification completed successfully.\n");
-            //ret_body["message"] = "Verify quote successfully!";
+            ret_body["message"] = "Verify quote successfully!";
             ret_body["status_code"] = 200;
             break;
         case SGX_QL_QV_RESULT_CONFIG_NEEDED:
@@ -289,7 +326,7 @@ int main(int argc, char *argv[])
         case SGX_QL_QV_RESULT_CONFIG_AND_SW_HARDENING_NEEDED:
             //p_log->warn("App: Verification completed with Non-terminal result: %x\n", quote_verification_result);
             p_log->info("App: Verify quote successfully in condition! Status code: %x\n", quote_verification_result);
-            //ret_body["message"] = "Verify quote successfully in condition!";
+            ret_body["message"] = "Verify quote successfully in condition!";
             ret_body["status_code"] = 200;
             break;
         case SGX_QL_QV_RESULT_INVALID_SIGNATURE:
@@ -301,6 +338,37 @@ int main(int argc, char *argv[])
             ret_body["status_code"] = 500;
             break;
         }
+
+        // Construct the quote report payload only if the quote verification success
+        if (ret_body["status_code"].ToInt() == 200)
+        {           
+            // Construct the payload data for signing
+            std::vector<uint8_t> sig_data;
+
+            const uint8_t *p_account_id = hexstring_to_bytes(account_id.c_str(), account_id.size());
+            const uint8_t *p_dcap_pubkey = hexstring_to_bytes(dcap_pubkey.c_str(), dcap_pubkey.size());
+            
+            sig_data.insert(sig_data.end(), p_pub_key, p_pub_key + sizeof(sgx_report_data_t));
+            sig_data.insert(sig_data.end(), p_mr_enclave, p_mr_enclave + sizeof(sgx_measurement_t));
+            sig_data.insert(sig_data.end(), p_account_id, p_account_id + account_id.size()/2);
+            sig_data.insert(sig_data.end(), p_dcap_pubkey, p_dcap_pubkey + dcap_pubkey.size()/2);
+           
+            // Perform the sr25519 signing with the sr25519 key pair
+            std::vector<uint8_t> sig(SR25519_SIGNATURE_SIZE, 0);
+            sr25519_sign(sig.data(), kp.data() + SR25519_SECRET_SIZE, kp.data(),
+                        sig_data.data(), sig_data.size());
+
+            // Construct the report body
+            std::string code = hexstring(p_mr_enclave, sizeof(sgx_measurement_t));
+            std::string tee_pubkey = hexstring(p_pub_key, sizeof(sgx_report_data_t));
+
+            report_body["payload"]["code"] = code;
+            report_body["payload"]["who"] = account_id;
+            report_body["payload"]["pubkey"] = tee_pubkey;
+            report_body["payload"]["public"]["sr25519"] = dcap_pubkey;
+            report_body["signature"]["sr25519"] = hexstring(sig.data(), sig.size());
+        }
+
     });
 
     svr.listen(host.c_str(), port);
