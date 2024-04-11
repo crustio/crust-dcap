@@ -112,9 +112,9 @@ int main(int argc, char *argv[])
         svr.stop();
     });
 
-    svr.Post("/entryNetwork", [&](const Request& req, Response& res) {
+    svr.Post("/attestation/report", [&](const Request& req, Response& res) {
         //call DCAP quote verify library to verify the quote
-        p_log->info("Dealing with new request...\n");
+        p_log->info("Dealing with new attestation request...\n");
         p_log->info("Request body:%s\n",req.body.c_str());
 
 	    int ret = 0;
