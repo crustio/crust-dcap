@@ -362,11 +362,11 @@ int main(int argc, char *argv[])
             std::string code = hexstring(p_mr_enclave, sizeof(sgx_measurement_t));
             std::string tee_pubkey = hexstring(p_pub_key, sizeof(sgx_report_data_t));
 
-            report_body["payload"]["code"] = code;
-            report_body["payload"]["who"] = account_id;
-            report_body["payload"]["pubkey"] = tee_pubkey;
-            report_body["payload"]["public"]["sr25519"] = dcap_pubkey;
-            report_body["signature"]["sr25519"] = hexstring(sig.data(), sig.size());
+            report_body["payload"]["code"] = "0x" + code;
+            report_body["payload"]["who"] = "0x" + account_id;
+            report_body["payload"]["pubkey"] = "0x" + tee_pubkey;
+            report_body["payload"]["public"]["sr25519"] = "0x" + dcap_pubkey;
+            report_body["signature"]["sr25519"] = "0x" + hexstring(sig.data(), sig.size());
         }
 
     });
