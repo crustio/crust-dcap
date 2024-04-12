@@ -14,8 +14,21 @@ C bindings over [RUST implementation of sr25519 (schnorrkel)](https://github.com
     rustup install 1.76.0
     rustup default 1.76.0
     ```
-2. `mkdir build && cd build`
-3. Options;
+2. Install cmake:
+   If you have cmake version >= 3.12 installed, skip this step.
+   - If Ubuntu version >= 20.04, just use `sudo apt install cmake`.
+   - If Ubuntu version <= 18.04, follow the instructions below:
+   ```bash
+   cd /tmp/
+   wget https://cmake.org/files/v3.12/cmake-3.12.4.tar.gz
+   tar -xvf cmake-3.12.4.tar.gz
+   cd cmake-3.12.4
+   ./bootstrap
+   make
+   make install
+   ```
+3. `mkdir build && cd build`
+4. Options:
    - `-DTESTING=[ON|OFF]` - enable or disable build of tests.
    - `-DCMAKE_BUILD_TYPE=[Release|Debug]` - select build type.
    - `-DBUILD_SHARED_LIBS=[TRUE|FALSE]` - build shared/static library. 
@@ -23,7 +36,7 @@ C bindings over [RUST implementation of sr25519 (schnorrkel)](https://github.com
    ```bash
    cmake .. -DCMAKE_BUILD_TYPE=Release
    ```
-4. Build and install library: 
+5. Build and install library: 
    ```
    sudo make install
    ```

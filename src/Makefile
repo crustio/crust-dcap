@@ -5,7 +5,7 @@ Include_Paths = -I$(SGX_SDK)/include -Iinclude -Iutils -Ilog -I/opt/crust/tools/
 
 Urts_Library_Name := sgx_urts
 
-C_Link_Flags = $(Include_Paths) -L$(SGX_LIBRARY_PATH) -lpthread -ldl -L/opt/crust/tools/openssl/lib -lssl -lcrypto -Wl,-R/opt/crust/tools/openssl/lib -l:libsgx_tservice.a -lsgx_launch -lsgx_dcap_ql -lsgx_dcap_quoteverify -lsgx_urts -l:libsgx_tcrypto.a -l:libsr25519crust.a
+C_Link_Flags = $(Include_Paths) -L$(SGX_LIBRARY_PATH) -lpthread -ldl -L/opt/crust/tools/openssl/lib -lssl -lcrypto -Wl,-R/opt/crust/tools/openssl/lib -l:libsgx_tservice.a -lsgx_launch -lsgx_dcap_ql -lsgx_dcap_quoteverify -lsgx_urts -l:libsgx_tcrypto.a ./lib/libsr25519crust.a
 Cpp_Link_Flags := -std=c++11 $(C_Link_Flags)
 
 Cpp_Files := $(wildcard *.cpp) $(wildcard utils/*.cpp) $(wildcard log/*.cpp)

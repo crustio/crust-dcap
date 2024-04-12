@@ -17,7 +17,7 @@
 #include "Utils.h"
 
 extern "C" {
-#include <sr25519/sr25519.h>
+#include "sr25519.h"
 }
 
 using namespace httplib;
