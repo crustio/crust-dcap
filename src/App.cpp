@@ -343,16 +343,39 @@ int main(int argc, char *argv[])
         if (ret_body["status_code"].ToInt() == 200)
         {           
             // Construct the payload data for signing
+            // RegisterPayload defined in Crust Mainnet is as follows:
+            //      pub struct RegisterPayload<Public, AccountId> {
+            //          code: Vec<u8>,
+            //          who: AccountId,
+            //          pubkey: Vec<u8>,
+            //          public: Public
+            //      }
+            // Need to follow the Substrate Scale Codec specification to encode the signature data
+            // 1. [code] is Vector type, encoded by concatening the encodings of its items and 
+            //    prefixing with the compactly encoded length of the vector.
+            //    code is 32 bytes long, the compact encoding of 32 is 0x80
+            // 2. [who] is AccountId trait, encoded by the raw byte stream
+            // 3. [pubkey] is Vector type, encoded by concatening the encodings of its items and 
+            //    prefixing with the compactly encoded length of the vector.
+            //    pubkey is 64 bytes long, the compact encodeing of 64 is 0x01 0x01
+            // 4. [public] is Public trait with actual type of sp_runtime::MultiSigner, which is a enum,
+            //    so encoded by the u8-index of the respective variant, followed by the encoded value if it is present.
+            //    For sp_runtime::MultiSigner with Sr25519 enum value, the u8-index is 0x01, and the encoded value is the 
+            //    sr25519 public key byte stream
             std::vector<uint8_t> sig_data;
 
             const uint8_t *p_account_id = hexstring_to_bytes(account_id.c_str(), account_id.size());
             const uint8_t *p_dcap_pubkey = hexstring_to_bytes(dcap_pubkey.c_str(), dcap_pubkey.size());
-            
-            sig_data.insert(sig_data.end(), p_pub_key, p_pub_key + sizeof(sgx_report_data_t));
+
+            sig_data.insert(sig_data.end(), 0x80);
             sig_data.insert(sig_data.end(), p_mr_enclave, p_mr_enclave + sizeof(sgx_measurement_t));
             sig_data.insert(sig_data.end(), p_account_id, p_account_id + account_id.size()/2);
+            sig_data.insert(sig_data.end(), 0x01);
+            sig_data.insert(sig_data.end(), 0x01);
+            sig_data.insert(sig_data.end(), p_pub_key, p_pub_key + sizeof(sgx_report_data_t));
+            sig_data.insert(sig_data.end(), 0x01);
             sig_data.insert(sig_data.end(), p_dcap_pubkey, p_dcap_pubkey + dcap_pubkey.size()/2);
-           
+
             // Perform the sr25519 signing with the sr25519 key pair
             std::vector<uint8_t> sig(SR25519_SIGNATURE_SIZE, 0);
             sr25519_sign(sig.data(), kp.data() + SR25519_SECRET_SIZE, kp.data(),
@@ -362,6 +385,7 @@ int main(int argc, char *argv[])
             std::string code = hexstring(p_mr_enclave, sizeof(sgx_measurement_t));
             std::string tee_pubkey = hexstring(p_pub_key, sizeof(sgx_report_data_t));
 
+            // Need to prefix with '0x' as the sworker enclave code deal with this prefix
             report_body["payload"]["code"] = "0x" + code;
             report_body["payload"]["who"] = "0x" + account_id;
             report_body["payload"]["pubkey"] = "0x" + tee_pubkey;
