@@ -12,7 +12,7 @@ if [ x"$PCS_API_KEY" != x"" ]; then
     sed -i "/\"ApiKey\"/ c \    \"ApiKey\" : \"$PCS_API_KEY\"," $pccs_conf_file
 fi
 cd /opt/intel/sgx-dcap-pccs
-nohup node -r esm pccs_server.js &>/dev/null &
+nohup node pccs_server.js &>/dev/null &
 pid=$!
 cd - &>/dev/null
 
