@@ -5,6 +5,6 @@ services:
     network_mode: host
     container_name: dcap-service
     environment:
-      DCAP_ARGS: '-t localhost -p 17777'
+      DCAP_ARGS: '-p 17777 -s 1111111111111111111111111111111111111111111111111111111111111111'
       PCCS_PORT: '9999'
       PCS_API_KEY: '5e0d868dea9c450a886ce6c46913643e'
