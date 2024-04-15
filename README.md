@@ -1,7 +1,8 @@
-# DCAP service
-This DCAP(Data Center Attestation Primitives) service is used to verify Crust sWorker entry-network identity quote using the DCAP QVL(Quote Verification Library), and returns the self-signed quote verification report to Crust sworker.
+# Crust DCAP &middot; [![GitHub license](https://img.shields.io/github/license/crustio/crust-dcap)](LICENSE)
 
-This DCAP service plays the similar role as the legacy IAS(Intel SGX Attestation Service) service, but using the ECDSA-based attestation instead of EPID-based attestation. For more information, please refer to [Intel SGX Remote Attestation](https://www.intel.com/content/www/us/en/developer/tools/software-guard-extensions/attestation-services.html).
+Crust DCAP(Data Center Attestation Primitives) service is used to verify Crust sWorker entry-network identity quote using the DCAP QVL(Quote Verification Library), and returns the self-signed quote verification report to Crust sworker.
+
+Crust DCAP service plays the similar role as the legacy IAS(Intel SGX Attestation Service) service, but using the ECDSA-based attestation instead of EPID-based attestation. For more information, please refer to [Intel SGX Remote Attestation](https://www.intel.com/content/www/us/en/developer/tools/software-guard-extensions/attestation-services.html).
 
 ## Prerequisites 
 - Install git-lfs:
