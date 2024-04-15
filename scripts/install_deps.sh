@@ -176,6 +176,21 @@ EOF
         res=$?
     fi
     checkRes $res "quit" "success" "$SYNCFILE"
+
+    # Configure /etc/sgx_default_qcnl.conf
+    grep "^PCCS_URL=https://localhost:9999" $qcnl_conf &>/dev/null
+    res=$(($?|$res))
+    grep "^USE_SECURE_CERT=FALSE" $qcnl_conf &>/dev/null
+    res=$(($?|$res))
+    if [ x"$res" = x"1" ]; then
+        mv /etc/sgx_default_qcnl.conf /etc/sgx_default_qcnl.conf.bak
+cat << EOF > /etc/sgx_default_qcnl.conf
+# PCCS server address
+PCCS_URL=https://localhost:9999/sgx/certification/v3/
+# To accept insecure HTTPS cert, set this option to FALSE
+USE_SECURE_CERT=FALSE
+EOF
+    fi
 }
 
 function checkAndInstall()
