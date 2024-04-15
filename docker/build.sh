@@ -72,7 +72,7 @@ services:
     network_mode: host
     container_name: dcap-service
     environment:
-      DCAP_ARGS: '-t 0.0.0.0 -p $app_port'
+      DCAP_ARGS: '-p $app_port -s 1111111111111111111111111111111111111111111111111111111111111111'
       PCCS_PORT: '$pccs_port'
       PCS_API_KEY: '$pcs_api_key'
 EOF

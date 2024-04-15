@@ -36,6 +36,7 @@ int show_help(const char *name)
     printf("           -h, --help: help information. \n");
     printf("           -t, --host: set server host, default is %s \n", host.c_str());
     printf("           -p, --port: set server port, default is %d \n", port);
+    printf("           -s, --seed: set sr25519 scheme secret seed for signing\n");
 
     return 1;
 }
